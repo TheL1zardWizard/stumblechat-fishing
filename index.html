@@ -82,6 +82,13 @@ body { margin: 0; }
   .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 6px 16px 22px; }
 
 
+  .scrollx { overflow-x: auto; }
+  .fishprices table { min-width: 640px; }
+  .fine { font-size: 12px; margin: 8px 0 0; }
+
+  .card { overflow-x: auto; max-width: 100%; }
+  .grid > * { min-width: 0; }
+
 </style>
 <script>
 window.addEventListener('error', function (e) {
@@ -173,8 +180,8 @@ const FG_DATA = (function () {
     ['shore', 'Sandy Shore', 's', 'shore', 1, 0, 1.0, 655, 300, 'coast', 'Cast from the beach into the breakers.'],
     ['bay', 'Mangrove Bay', 's', 'bay', 6, 0, 1.1, 600, 505, 'coast', 'Sheltered tidal flats and mangrove roots.'],
     ['reef', 'Coral Reef', 's', 'reef', 12, 1, 1.15, 790, 405, 'ocean', 'Colorful reef just offshore. A rowboat is needed.'],
-    ['deep', 'Deep Blue Ocean', 's', 'ocean', 22, 2, 1.0, 860, 195, 'ocean', 'Open water and big pelagic fish. A skiff is needed.'],
-    ['trench', 'Abyssal Trench', 's', 'trench', 34, 3, 0.9, 885, 535, 'trench', 'Dark, deep water. A sport fisher is needed.']
+    ['deep', 'Deep Blue Ocean', 's', 'ocean', 22, 3, 1.0, 860, 195, 'ocean', 'Open water and big pelagic fish. A skiff is needed.'],
+    ['trench', 'Abyssal Trench', 's', 'trench', 34, 4, 0.9, 885, 535, 'trench', 'Dark, deep water. A sport fisher is needed.']
   ].map((a, i) => ({
     idx: i, id: a[0], name: a[1], water: a[2], kind: a[3], minLvl: a[4], boat: a[5], xpMult: a[6],
     x: a[7], y: a[8], climate: a[9], blurb: a[10]
@@ -318,18 +325,19 @@ Coelacanth|s|4|30|90|40|50|trench`;
   D.baitById = {};
   D.baits.forEach(b => (D.baitById[b.id] = b));
 
-  // tier 0 = no boat.  fuel: which fuel the boat burns, litres burned per cast out on the water, tank size, litres in the tank when bought
+  // tier 0 = no boat.  A boat with fuel null (the rowboat) needs none.  fuel: which fuel the boat burns, litres burned per cast out on the water, tank size, litres in the tank when bought
   D.fuels = {
     gas: { id: 'gas', name: 'Gasoline', price: 3 },
     diesel: { id: 'diesel', name: 'Diesel', price: 4 }
   };
   D.boats = [
     ['none', 'No boat', 0, 0, null, 0, 0, 0],
-    ['rowboat', 'Rowboat', 800, 0.02, 'gas', 1, 20, 8],
+    ['rowboat', 'Rowboat', 800, 0.02, null, 0, 0, 0],   // rowed by hand: no fuel
+    ['jonboat', 'Jon Boat', 2000, 0.03, 'gas', 2, 40, 12],   // a small motor boat: a step up from the rowboat
     ['skiff', 'Skiff', 5000, 0.04, 'gas', 3, 60, 20],
     ['sportfisher', 'Sport Fisher', 25000, 0.06, 'gas', 8, 160, 50],
     ['trawler', 'Deep-Sea Trawler', 90000, 0.08, 'diesel', 12, 400, 100]
-  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], price: a[2], bite: a[3], fuel: a[4], burn: a[5], tank: a[6], starter: a[7], haul: i === 4 ? 0.4 : 0 }));
+  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], price: a[2], bite: a[3], fuel: a[4], burn: a[5], tank: a[6], starter: a[7], haul: a[0] === 'trawler' ? 0.4 : 0 }));
 
   D.upgrades = [
     { id: 'finder', name: 'Fish Finder', prices: [1500, 6000, 25000], desc: '+4% bite chance per level' },
@@ -645,11 +653,21 @@ function createFishingUI(root, D) {
     const own = me || {};
     let h = '<div class="card"><h2>🏪 Tackle Shop</h2><p>Sell fish: <code>.sell all</code> · <code>.sell fresh</code> · <code>.sell salt</code> · <code>.sell bass</code>. Buy with <code>.buy name</code> (bait: <code>.buy worms 25</code>).' + (me ? ' You have <b>' + money(me.c) + '</b>.' : '') + '</p>';
     h += '<h3>Fish value</h3><p class="muted" data-s="margin:0">Price depends on the species, how heavy the fish is (heavier is worth more, but not in direct proportion) and its quality: ' + D.grades.map(g => '<b>' + g.n + '</b> ×' + g.m).join(', ') + '. Live Well upgrades add +8% per level. Higher skill gives better quality and bigger fish.</p></div>';
+    // every fish the shop buys: value range runs from a Poor fish at its lightest to a Trophy fish at its heaviest
+    const wExp = D.wExp || 1, val = (f, w, g) => Math.max(1, Math.round(Math.pow(w, wExp) * f.ppk * D.grades[g].m));
+    const caughtSet = me ? new Set(me.dex) : null;
+    [['f', 'Freshwater fish'], ['s', 'Saltwater fish']].forEach(([w, title]) => {
+      const list = D.fish.filter(f => f.water === w).sort((a, b) => a.minLvl - b.minLvl || a.tier - b.tier || a.name.localeCompare(b.name));
+      h += '<div class="card fishprices"><h2>🐟 ' + title + ' (' + list.length + ')</h2><div class="scrollx"><table><tr><th>Fish</th><th class="n">Lv</th><th>Rarity</th><th>Size</th><th class="n">Sells for</th><th class="n">Typical</th><th>Found at</th>' + (me ? '<th></th>' : '') + '</tr>' +
+        list.map(f => '<tr><td class="t' + f.tier + '">' + esc(f.name) + '</td><td class="n">' + f.minLvl + '</td><td>' + D.tiers[f.tier] + '</td><td>' + f.minW + '–' + f.maxW + 'kg</td><td class="n">' + money(val(f, f.minW, 0)) + ' – ' + money(val(f, f.maxW, 5)) + '</td><td class="n">' + money(val(f, (f.minW + f.maxW) / 2, 2)) + '</td><td>' + f.locs.map(id => esc(D.locById[id] ? D.locById[id].name : id)).join(', ') + '</td>' + (me ? '<td>' + (caughtSet.has(f.idx) ? '✓' : '') + '</td>' : '') + '</tr>').join('') +
+        '</table></div><p class="muted fine">Sells for: a Poor fish at its lightest up to a Trophy fish at its heaviest. Typical: a Good fish of average size. Live Well upgrades add 8% per level.</p></div>';
+    });
+    h += '<div class="card"><h2>What the shop buys</h2><p>Fish are the only things the shop buys, and every fish you can catch is listed above. Everything else (treasure, bait, buffs from random events) goes straight to your pocket or tackle box.</p></div>';
     h += '<div class="grid" data-s="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:14px">';
     h += '<div class="card"><h2>Rods</h2><table><tr><th>Rod</th><th class="n">Price</th><th class="n">Bite</th><th class="n">Luck</th><th class="n">Quality</th><th class="n">Max kg</th></tr>' + D.rods.map(r => '<tr><td>' + esc(r.name) + (own.rod === r.idx ? ' <span class="ok">✓ yours</span>' : '') + (r.price ? '<br><code>.buy ' + r.id + '</code>' : '<br><span class="muted">starter</span>') + '</td><td class="n">' + (r.price ? money(r.price) : 'free') + '</td><td class="n">+' + Math.round(r.bite * 100) + '%</td><td class="n">+' + Math.round(r.luck * 100) + '%</td><td class="n">+' + r.qual + '</td><td class="n">' + r.cap + '</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">A rod too weak for a huge fish will lose it.</p></div>';
     h += '<div class="card"><h2>Bait</h2><table><tr><th>Bait</th><th>Water</th><th class="n">Each</th><th class="n">Bite</th><th class="n">Luck</th></tr>' + D.baits.map(b => '<tr><td>' + esc(b.name) + '<br><code>.buy ' + b.id + ' 10</code></td><td>' + (b.water === 'f' ? 'Fresh' : b.water === 's' ? 'Salt' : 'Any') + '</td><td class="n">' + money(b.price) + '</td><td class="n">+' + Math.round(b.bite * 100) + '%</td><td class="n">+' + Math.round(b.luck * 100) + '%</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">One bait is used per cast. <code>.bait name</code> to equip.</p></div>';
-    h += '<div class="card"><h2>Boats</h2><table><tr><th>Boat</th><th class="n">Price</th><th class="n">Bite</th><th>Fuel per cast</th><th>Opens</th></tr>' + D.boats.slice(1).map(b => '<tr><td>' + esc(b.name) + (own.boat === b.idx ? ' <span class="ok">✓ yours</span>' : '') + '<br><code>.buy ' + b.id + '</code></td><td class="n">' + money(b.price) + '</td><td class="n">+' + Math.round(b.bite * 100) + '%</td><td>' + b.burn + ' L ' + D.fuels[b.fuel].name + '<br><span class="muted">tank ' + b.tank + ' L</span></td><td>' + (D.locs.filter(l => l.boat === b.idx).map(l => esc(l.name)).join(', ') || '<span class="muted">best bonuses</span>') + '</td></tr>').join('') + '</table></div>';
-    h += '<div class="card"><h2>⛽ Fuel</h2><table><tr><th>Fuel</th><th class="n">Price per litre</th><th>Used by</th></tr>' + Object.keys(D.fuels).map(k => '<tr><td>' + D.fuels[k].name + '<br><code>.buy ' + k + ' 20</code></td><td class="n">' + money(D.fuels[k].price) + '</td><td>' + D.boats.slice(1).filter(b => b.fuel === k).map(b => esc(b.name)).join(', ') + '</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">A boat burns fuel on every cast out on the water (spots that need a boat). Fishing from shore is free. <code>.buy fuel full</code> fills your tank. Outboard Motor upgrades cut fuel use by 10% per level, and the Deep-Sea Trawler nets an extra fish on 40% of casts.</p></div>';
+    h += '<div class="card"><h2>Boats</h2><table><tr><th>Boat</th><th class="n">Price</th><th class="n">Bite</th><th>Fuel per cast</th><th>Opens</th></tr>' + D.boats.slice(1).map(b => '<tr><td>' + esc(b.name) + (own.boat === b.idx ? ' <span class="ok">✓ yours</span>' : '') + '<br><code>.buy ' + b.id + '</code></td><td class="n">' + money(b.price) + '</td><td class="n">+' + Math.round(b.bite * 100) + '%</td><td>' + (b.fuel ? b.burn + ' L ' + D.fuels[b.fuel].name + '<br><span class="muted">tank ' + b.tank + ' L</span>' : '<span class="muted">none (rowed by hand)</span>') + '</td><td>' + (D.locs.filter(l => l.boat === b.idx).map(l => esc(l.name)).join(', ') || '<span class="muted">no new spots, better bonuses</span>') + '</td></tr>').join('') + '</table></div>';
+    h += '<div class="card"><h2>⛽ Fuel</h2><table><tr><th>Fuel</th><th class="n">Price per litre</th><th>Used by</th></tr>' + Object.keys(D.fuels).map(k => '<tr><td>' + D.fuels[k].name + '<br><code>.buy ' + k + ' 20</code></td><td class="n">' + money(D.fuels[k].price) + '</td><td>' + D.boats.slice(1).filter(b => b.fuel === k).map(b => esc(b.name)).join(', ') + '</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">Motor boats burn fuel on every cast out on the water (spots that need a boat); the Rowboat is rowed by hand and needs none. Fishing from shore is free. <code>.buy fuel full</code> fills your tank. Outboard Motor upgrades cut fuel use by 10% per level, and the Deep-Sea Trawler nets an extra fish on 40% of casts.</p></div>';
     h += '<div class="card"><h2>Boat upgrades</h2><p class="muted" data-s="margin-top:-4px">Need a boat. Three levels each.</p><table><tr><th>Upgrade</th><th>Effect</th><th class="n">Level prices</th></tr>' + D.upgrades.map((u, i) => '<tr><td>' + esc(u.name) + (own.up ? ' <span class="muted">(' + own.up[i] + '/3)</span>' : '') + '<br><code>.buy ' + (u.id === 'well' ? 'livewell' : u.id) + '</code></td><td>' + esc(u.desc) + '</td><td class="n">' + u.prices.map(money).join('<br>') + '</td></tr>').join('') + '</table></div></div>';
     $('#shop').innerHTML = h;
   }
@@ -667,7 +685,7 @@ function createFishingUI(root, D) {
       '<div class="stat"><div class="k">Bag</div><div class="v">' + me.bag[0] + '/' + me.bag[1] + '</div><div class="k">worth ~' + money(me.bag[2]) + '</div></div>' +
       '<div class="stat"><div class="k">Rod</div><div class="v" data-s="font-size:15px">' + esc(D.rods[me.rod].name) + '</div></div>' +
       '<div class="stat"><div class="k">Boat</div><div class="v" data-s="font-size:15px">' + esc(D.boats[me.boat].name) + '</div><div class="k">' + D.upgrades.map((u, i) => u.name + ' ' + me.up[i]).join(' · ') + '</div></div>' +
-      (me.boat ? '<div class="stat"><div class="k">⛽ Fuel</div><div class="v" data-s="font-size:15px">' + (me.fu ? me.fu[D.boats[me.boat].fuel === 'diesel' ? 1 : 0] : 0) + ' / ' + D.boats[me.boat].tank + ' L</div><div class="k">' + D.fuels[D.boats[me.boat].fuel].name + ', ' + D.boats[me.boat].burn + ' L per cast on the water</div></div>' : '') + '</div>';
+      (me.boat && D.boats[me.boat].fuel ? '<div class="stat"><div class="k">⛽ Fuel</div><div class="v" data-s="font-size:15px">' + (me.fu ? me.fu[D.boats[me.boat].fuel === 'diesel' ? 1 : 0] : 0) + ' / ' + D.boats[me.boat].tank + ' L</div><div class="k">' + D.fuels[D.boats[me.boat].fuel].name + ', ' + D.boats[me.boat].burn + ' L per cast on the water</div></div>' : '') + '</div>';
     h += '<h3>Bait</h3><div>' + (me.bt.length ? me.bt.map(b => esc(D.baits[b[0]].name) + ' ×' + b[1] + (b[0] === me.eq ? ' <span class="ok">(equipped)</span>' : '')).join(' &nbsp;·&nbsp; ') : '<span class="muted">none</span>') + '</div>';
     h += '<h3>Lifetime</h3><div class="cards"><div class="stat"><div class="k">Casts</div><div class="v">' + me.st[0] + '</div></div><div class="stat"><div class="k">Fish caught</div><div class="v">' + me.st[1] + '</div></div><div class="stat"><div class="k">Fish sold</div><div class="v">' + me.st[2] + '</div></div><div class="stat"><div class="k">Total earned</div><div class="v">' + money(me.st[3]) + '</div></div></div></div>';
     h += '<div class="card" data-s="margin-top:14px"><h2>Fish journal (' + me.dex.length + '/' + D.fish.length + ')</h2>';
