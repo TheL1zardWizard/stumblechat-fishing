@@ -418,6 +418,7 @@ function createFishingUI(root, D) {
     snap = s;
     players = s.p.map(a => ({ pid: a[0], name: a[1], loc: a[2], fl: a[3], sl: a[4], cash: a[5], fish: a[6], best: a[7], bestW: a[8] / 10, xp: a[9], rank: a[10] }));
     colors = assignColors(players); me = s.m || null;
+    if (me && typeof me.dex === 'string') { const d = []; for (let i = 0; i < me.dex.length; i++) { const n = parseInt(me.dex[i], 16); for (let b = 0; b < 4; b++) if (n & (8 >> b)) d.push(i * 4 + b); } me.dex = d; }   // the link carries caught species as a hex bit mask
     $('#meta').textContent = (s.r ? 'Room: ' + s.r + ' · ' : '') + 'as of ' + new Date(s.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     $('#metab').style.display = me ? '' : 'none';
     const b = $('#banner'); let msg = '';
@@ -620,7 +621,7 @@ function createFishingUI(root, D) {
   function bar(info) { return '<div class="bar"><i data-s="width:' + (info.need ? Math.min(100, (info.cur / info.need) * 100) : 100) + '%"></i></div>'; }
   function renderMe() {
     const el = $('#me');
-    if (!me) { el.innerHTML = '<div class="card">Open the link from a <code>.stats</code> or <code>.map</code> message in chat to see your own angler page.</div>'; return; }
+    if (!me) { el.innerHTML = '<div class="card">Open the link from a <code>.stats</code> or <code>.shop</code> message in chat to see your own angler page.</div>'; return; }
     const p = meP(), f = lvlOf(me.f), s = lvlOf(me.s), got = new Set(me.dex);
     let h = '<div class="card"><h2>' + (p ? '<span class="chip" data-s="color:' + colors[p.pid] + '">' + esc(initialOf(p.name)) + '</span>' + esc(p.name) : 'Your angler') + '</h2><div class="cards">' +
       '<div class="stat"><div class="k">Freshwater</div><div class="v">Lv ' + f.l + '</div>' + bar(f) + '<div class="k">' + f.cur + ' / ' + (f.need || 'MAX') + ' xp</div></div>' +
