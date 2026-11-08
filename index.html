@@ -340,6 +340,42 @@ Coelacanth|s|4|30|90|40|50|trench`;
   D.xpBase = 4.5; D.xpPow = 2.0; D.xpFlat = 8;   // xp needed for level l = floor(xpBase * l^xpPow)
   D.lvLuck = 0.012;                // rare-fish chance gained per skill level
   D.priceMult = 1;                 // multiplies every fish sale price
+  /* ---------- compact link format ("2." tokens) ----------
+   * The UI link carries a snapshot of the room. Plain text with short fields is much shorter than JSON, and
+   * StumbleChat cuts chat messages at 500 characters. Names are percent-encoded so . , ; _ : never clash. */
+  const encName = n => encodeURIComponent(String(n)).replace(/[.~!*'()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  const b36 = n => Math.max(0, Math.round(+n || 0)).toString(36);
+  const un36 = s => parseInt(s || '0', 36) || 0;
+  D.encodeSnap = function (O) {
+    const head = [b36(Math.floor(O.t / 60000)), O.w.map(x => x.toString(36)).join(''), encName(O.r || '')].join(',');
+    const ps = O.p.map(a => [b36(a[0]), b36(a[2] + 2), b36(a[3]), b36(a[4]), b36(a[5]), b36(a[6]), b36(a[10]), encName(a[1])].join(',')).join(';');
+    let s = '2.' + head + '.' + ps;
+    if (O.m) {
+      const m = O.m;
+      s += '.' + [b36(m.pid), b36(m.f), b36(m.s), b36(m.c), m.rod, m.boat, m.up.join(''), m.bag.map(b36).join('_'), b36(m.eq + 1), m.fu.map(b36).join('_'),
+        m.bt.map(x => b36(x[0]) + ':' + b36(x[1])).join('_'), m.st.map(b36).join('_'), m.dex, b36(m.loc + 1)].join(',');
+    }
+    return s;
+  };
+  D.decodeSnap = function (s) {
+    const parts = s.slice(2).split('.');
+    const h = parts[0].split(',');
+    const O = { v: D.version, t: un36(h[0]) * 60000, w: h[1].split('').map(c => parseInt(c, 36)), r: decodeURIComponent(h[2] || ''), p: [] };
+    (parts[1] || '').split(';').filter(Boolean).forEach(r => {
+      const a = r.split(',');
+      O.p.push([un36(a[0]), decodeURIComponent(a[7] || ''), un36(a[1]) - 2, un36(a[2]), un36(a[3]), un36(a[4]), un36(a[5]), -1, 0, 0, un36(a[6])]);
+    });
+    if (parts[2]) {
+      const a = parts[2].split(',');
+      O.m = {
+        pid: un36(a[0]), f: un36(a[1]), s: un36(a[2]), c: un36(a[3]), rod: +a[4] || 0, boat: +a[5] || 0, up: (a[6] || '0000').split('').map(Number),
+        bag: (a[7] || '0').split('_').map(un36), eq: un36(a[8]) - 1, fu: (a[9] || '0').split('_').map(un36),
+        bt: (a[10] ? a[10].split('_') : []).map(x => x.split(':').map(un36)), st: (a[11] || '0').split('_').map(un36), dex: a[12] || '', loc: un36(a[13]) - 1
+      };
+    }
+    return O;
+  };
+
   D.baseBag = 20;
   D.startCash = 50;
   D.wxBlockMs = 30 * 60 * 1000;
@@ -372,6 +408,7 @@ function createFishingUI(root, D) {
   /* ---------------- data: decode the link, or build demo data ---------------- */
   async function decode(h) {
     h = h.replace(/^#/, ''); if (h.length < 3) return null;
+    if (h.slice(0, 2) === '2.') return D.decodeSnap(h);   // the compact plain-text format
     const kind = h.slice(0, 2); let b = h.slice(2).replace(/-/g, '+').replace(/_/g, '/');
     while (b.length % 4) b += '=';
     const bytes = Uint8Array.from(atob(b), c => c.charCodeAt(0));
