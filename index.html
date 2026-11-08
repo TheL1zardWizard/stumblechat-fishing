@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fishing Island</title>
+<style>
+html { background: #07161f; }
+body { margin: 0; }
+:root, :host {
+    --bg: #07161f; --panel: #0e2433; --panel2: #123149; --line: #1f4a66; --text: #e8f3f8; --muted: #8fb1c4;
+    --accent: #3fd0c9; --gold: #ffd23f; --bad: #ff6b6b; --good: #7bed3a;
+    --t0: #9fb4c0; --t1: #6fd16f; --t2: #4aa3ff; --t3: #c27bff; --t4: #ffb13d;
+  }
+  * { box-sizing: border-box; }
+  .fg-root { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+  nav button { background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  nav button:hover { color: var(--text); }
+  nav button[aria-selected="true"] { background: var(--panel2); color: var(--text); border-color: var(--line); }
+  #banner { display: none; margin: 10px 16px 0; padding: 8px 12px; border-radius: 8px; background: #3a2d10; border: 1px solid #7a5d1a; color: #ffe2a0; font-size: 13px; }
+  main { padding: 12px 16px 28px; max-width: 1280px; margin: 0 auto; }
+  section[hidden] { display: none; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .card h2 { margin: 0 0 8px; font-size: 15px; }
+  .card h3 { margin: 12px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  #mapwrap { padding: 6px; }
+  svg#map { width: 100%; height: auto; display: block; border-radius: 8px; }
+  .loc { cursor: pointer; outline: none; }
+  .loc .pin { transition: transform .15s; transform-origin: center; transform-box: fill-box; }
+  .loc:hover .pin, .loc:focus .pin, .loc.sel .pin { transform: scale(1.18); }
+  .loc.sel .ring { opacity: 1; }
+  .ring { opacity: 0; fill: none; stroke: #fff; stroke-width: 2.5; stroke-dasharray: 5 4; }
+  .lbl { font: 700 12px system-ui, sans-serif; fill: #fff; paint-order: stroke; stroke: #0b2233; stroke-width: 3.5px; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
+  .wxi { font-size: 19px; pointer-events: none; }
+  .pl { cursor: help; }
+  .pl text { font: 800 16px ui-monospace, Menlo, Consolas, monospace; text-anchor: middle; paint-order: stroke; stroke: #0a1620; stroke-width: 4px; stroke-linejoin: round; }
+  .pl.me .mering { stroke: #fff; stroke-width: 2; fill: none; animation: pulse 1.6s ease-in-out infinite; }
+  #tip { position: fixed; z-index: 10; pointer-events: none; background: #06121a; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; max-width: 260px; box-shadow: 0 4px 16px rgba(0,0,0,.5); display: none; }
+  #tip b { font-size: 14px; }
+  .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid #000; }
+  .chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #0a1620; border: 1px solid #000; font: 800 13px ui-monospace, Menlo, monospace; margin-right: 6px; vertical-align: middle; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.f { color: #7cc4ff; border-color: #2b6da3; } .tag.s { color: #5ee0d6; border-color: #1d7f7a; }
+  .t0 { color: var(--t0); } .t1 { color: var(--t1); } .t2 { color: var(--t2); } .t3 { color: var(--t3); } .t4 { color: var(--t4); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
+  th.sort { cursor: pointer; } th.sort:hover { color: var(--text); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #06121a; border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 12.5px; color: #ffe08a; }
+  .muted { color: var(--muted); } .ok { color: var(--good); } .no { color: var(--bad); }
+  .bar { height: 8px; background: #06121a; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, #2b9fd8, #3fd0c9); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: 9px 12px; }
+  .stat .k { color: var(--muted); font-size: 12px; } .stat .v { font-size: 18px; font-weight: 700; }
+  .dex { display: flex; flex-wrap: wrap; gap: 5px; }
+  .dex span { font-size: 11.5px; padding: 2px 7px; border-radius: 6px; background: #0a1b27; border: 1px solid var(--line); color: #5c7c8f; }
+  .dex span.got { color: var(--text); border-color: #3a7a9c; background: #0f3046; }
+  .wxrow { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .wxrow:last-child { border-bottom: 0; } .wxrow .ic { width: 24px; text-align: center; font-size: 17px; }
+  .wxrow .nm { flex: 1; cursor: pointer; } .wxrow .nm:hover { color: var(--accent); }
+  button.btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; font: inherit; }
+  button.btn:hover { border-color: var(--accent); }
+  /* weather animation */
+  @keyframes fall { from { transform: translateY(-34px); } to { transform: translateY(34px); } }
+  @keyframes snow { from { transform: translate(-3px, -34px); } to { transform: translate(5px, 34px); } }
+  @keyframes drift { from { transform: translateX(-14px); } to { transform: translateX(14px); } }
+  @keyframes gust { from { transform: translateX(-36px); opacity: 0; } 30% { opacity: 1; } to { transform: translateX(36px); opacity: 0; } }
+  @keyframes glow { 0%, 100% { opacity: .35; } 50% { opacity: .75; } }
+  @keyframes flash { 0%, 90%, 100% { opacity: 0; } 93% { opacity: .75; } 96% { opacity: .1; } 98% { opacity: .6; } }
+  @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  .a-fall { animation: fall .75s linear infinite; } .a-snow { animation: snow 2.6s linear infinite; } .a-drift { animation: drift 5s ease-in-out infinite alternate; }
+  .a-gust { animation: gust 1.6s linear infinite; } .a-glow { animation: glow 2.4s ease-in-out infinite; } .a-flash { animation: flash 4s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .a-fall, .a-snow, .a-drift, .a-gust, .a-glow, .a-flash, .pl.me .mering { animation: none !important; } }
+  .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 6px 16px 22px; }
+
+
+</style>
+<script>
+window.addEventListener('error', function (e) {
+  var b = document.getElementById('banner');
+  if (b) { b.style.display = 'block'; b.textContent = 'Something went wrong in this page (' + e.message + '). Try a current version of Chrome, Edge or Firefox.'; }
+});
+</script>
+</head>
+<body class="fg-root">
+<noscript><p style="padding:20px;color:#ffe2a0;font:16px system-ui">This page needs JavaScript, and it looks like it is turned off or blocked here. Open the file in a normal browser tab (Chrome, Edge or Firefox).</p></noscript>
+<header>
+  <h1>🎣 Fishing Island</h1>
+  <span class="meta" id="meta"></span>
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-tab="map" aria-selected="true">Map</button>
+    <button role="tab" data-tab="board" aria-selected="false">Leaderboard</button>
+    <button role="tab" data-tab="shop" aria-selected="false">Shop</button>
+    <button role="tab" data-tab="me" aria-selected="false" id="metab">My angler</button>
+  </nav>
+</header>
+<div id="banner"></div>
+<main>
+  <section id="tab-map">
+    <div class="grid">
+      <div class="card" id="mapwrap"><svg id="map" viewBox="0 0 1000 620" role="img" aria-label="Island fishing map"></svg></div>
+      <aside class="card" id="side"></aside>
+    </div>
+  </section>
+  <section id="tab-board" hidden><div class="card" id="board"></div></section>
+  <section id="tab-shop" hidden><div id="shop"></div></section>
+  <section id="tab-me" hidden><div id="me"></div></section>
+</main>
+<footer class="foot">StumbleChat Fishing Game · Credit: TheL1zardWizard / theChivery</footer>
+<div id="tip"></div>
+
+<script>
+/* Shared game data. Inlined into both the userscript and the UI page by build.js. */
+const FG_DATA = (function () {
+  const D = { version: 1, maxLevel: 60 };
+
+  D.tiers = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+  D.tierXp = [5, 11, 24, 52, 120];
+  D.tierW = [60, 28, 9, 2.6, 0.4];
+  D.grades = [
+    { n: 'Poor', m: 0.6 }, { n: 'Average', m: 0.85 }, { n: 'Good', m: 1.0 },
+    { n: 'Great', m: 1.25 }, { n: 'Prime', m: 1.6 }, { n: 'Trophy', m: 2.2 }
+  ];
+  D.gradeCut = [20, 35, 50, 65, 82];
+
+  // id, name, icon, bite, luck, qual, description
+  D.wx = [
+    ['clear', 'Clear skies', '☀️', 0, 0, 0],
+    ['cloudy', 'Partly cloudy', '⛅', 0.06, 0, 0],
+    ['overcast', 'Overcast', '☁️', 0.08, 0.02, 0],
+    ['drizzle', 'Light drizzle', '🌦️', 0.10, 0.03, 0],
+    ['rain', 'Steady rain', '🌧️', 0.14, 0.05, 0],
+    ['storm', 'Thunderstorm', '⛈️', -0.18, 0.12, 4],
+    ['fog', 'Heavy fog', '🌫️', -0.04, 0.06, 0],
+    ['windy', 'Strong wind', '💨', -0.10, 0, 0],
+    ['heat', 'Heat wave', '🔥', -0.12, 0, -4],
+    ['calm', 'Golden calm', '✨', 0.12, 0.04, 3],
+    ['snow', 'Snow flurries', '❄️', -0.06, 0.08, 0]
+  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], icon: a[2], bite: a[3], luck: a[4], qual: a[5] }));
+  D.wxById = {};
+  D.wx.forEach(w => (D.wxById[w.id] = w));
+
+  const clim = {
+    temperate: 'clear:5,cloudy:4,overcast:3,drizzle:2,rain:2,storm:1,fog:1,windy:1,heat:1,calm:1.5',
+    river: 'clear:4,cloudy:4,overcast:3,drizzle:3,rain:3,storm:1,fog:2,windy:1,heat:1,calm:1.5',
+    mountain: 'clear:3,cloudy:3,overcast:3,snow:3,windy:2,fog:2,storm:1,calm:1',
+    swamp: 'clear:2,cloudy:2,overcast:3,drizzle:3,rain:3,storm:2,fog:4,heat:3,calm:1',
+    coast: 'clear:4,cloudy:3,windy:3,drizzle:1,rain:1,storm:1,fog:2,calm:2,heat:1',
+    ocean: 'clear:3,cloudy:3,windy:4,overcast:2,rain:2,storm:3,fog:2,calm:2',
+    trench: 'clear:2,cloudy:3,windy:4,overcast:3,rain:2,storm:4,fog:3,calm:1'
+  };
+  D.climates = {};
+  Object.keys(clim).forEach(k => {
+    D.climates[k] = clim[k].split(',').map(p => { const [a, b] = p.split(':'); return [a, parseFloat(b)]; });
+  });
+
+  // id, name, water, kind, minLvl, boat, xpMult, x, y, climate, blurb
+  D.locs = [
+    ['lake', 'Mirror Lake', 'f', 'lake', 1, 0, 1.0, 300, 335, 'temperate', 'A calm lake in the middle of the island.'],
+    ['river', 'Willow River', 'f', 'river', 3, 0, 1.0, 450, 255, 'river', 'A winding river that runs from the hills to the sea.'],
+    ['swamp', 'Cypress Swamp', 'f', 'swamp', 5, 0, 1.1, 195, 445, 'swamp', 'Murky water and knobby cypress knees.'],
+    ['alpine', 'Alpine Lake', 'f', 'lake', 8, 0, 1.2, 255, 120, 'mountain', 'Ice-cold water beneath the peaks.'],
+    ['rapids', 'Thunder Rapids', 'f', 'river', 14, 0, 1.3, 355, 175, 'mountain', 'Fast whitewater, strong fish.'],
+    ['bayou', 'Black Bayou', 'f', 'swamp', 20, 1, 1.4, 120, 525, 'swamp', 'Deep backwater. A rowboat is needed.'],
+    ['surf', 'Sandy Shore', 's', 'shore', 1, 0, 1.0, 655, 300, 'coast', 'Cast from the beach into the breakers.'],
+    ['bay', 'Mangrove Bay', 's', 'bay', 6, 0, 1.1, 600, 505, 'coast', 'Sheltered tidal flats and mangrove roots.'],
+    ['reef', 'Coral Reef', 's', 'reef', 12, 1, 1.15, 790, 405, 'ocean', 'Colorful reef just offshore. A rowboat is needed.'],
+    ['deep', 'Deep Blue Ocean', 's', 'ocean', 22, 2, 1.0, 860, 195, 'ocean', 'Open water and big pelagic fish. A skiff is needed.'],
+    ['trench', 'Abyssal Trench', 's', 'trench', 34, 3, 0.9, 885, 535, 'trench', 'Dark, deep water. A sport fisher is needed.']
+  ].map((a, i) => ({
+    idx: i, id: a[0], name: a[1], water: a[2], kind: a[3], minLvl: a[4], boat: a[5], xpMult: a[6],
+    x: a[7], y: a[8], climate: a[9], blurb: a[10]
+  }));
+  D.locById = {};
+  D.locs.forEach(l => (D.locById[l.id] = l));
+  D.shop = { id: 'shop', name: 'Tackle Shop', x: 575, y: 395 };
+
+  // name|water|tier|minW|maxW|$/kg|minLvl|locations
+  const fish = `Bluegill|f|0|0.1|0.5|28|1|lake,river,swamp
+Yellow Perch|f|0|0.15|0.7|26|1|lake,alpine,river
+Pumpkinseed Sunfish|f|0|0.1|0.4|30|1|lake,swamp,river
+Black Crappie|f|0|0.2|0.9|24|1|lake,swamp,bayou
+Redear Sunfish|f|0|0.2|0.8|22|2|swamp,bayou,lake
+Common Carp|f|0|1|6|8|2|lake,river
+Largemouth Bass|f|1|0.8|4|18|3|lake,swamp,river,bayou
+Smallmouth Bass|f|1|0.6|3|22|4|river,lake,rapids
+Channel Catfish|f|1|1|8|10|4|river,lake,swamp,bayou
+Rainbow Trout|f|1|0.5|4|24|5|river,alpine,rapids
+Brook Trout|f|1|0.3|2|30|5|alpine,rapids
+Chain Pickerel|f|1|0.7|3.5|20|5|swamp,bayou
+Walleye|f|1|0.8|6|28|8|lake,river
+Brown Trout|f|1|0.6|5|26|8|alpine,river,rapids
+American Eel|f|2|0.5|3|40|10|river,swamp,bayou
+Bowfin|f|2|1.5|7|15|10|swamp,bayou
+Arctic Grayling|f|2|0.3|1.5|60|11|alpine
+Northern Pike|f|2|2|14|14|12|lake,river,swamp
+Coho Salmon|f|2|2|9|20|12|rapids,river
+Steelhead|f|2|2|9|22|13|rapids
+Flathead Catfish|f|2|4|30|8|14|river,bayou
+Lake Trout|f|2|2|18|14|14|alpine
+Longnose Gar|f|2|2|12|11|15|bayou,swamp,river
+Muskellunge|f|3|6|25|20|20|lake,river
+Blue Catfish|f|3|10|50|9|22|river,bayou
+Chinook Salmon|f|3|8|30|15|24|rapids
+Paddlefish|f|3|10|45|10|25|river,bayou
+White Sturgeon|f|3|20|90|8|26|river
+Alligator Gar|f|3|15|90|10|28|bayou,swamp
+Golden Trout|f|3|0.5|3|150|30|alpine
+Taimen|f|4|20|60|22|36|rapids
+Arapaima|f|4|40|150|9|38|bayou
+Beluga Sturgeon|f|4|60|200|11|40|river,lake
+Atlantic Croaker|s|0|0.2|0.8|26|1|surf,bay
+Spot|s|0|0.1|0.4|30|1|surf,bay
+Pinfish|s|0|0.1|0.3|28|1|surf,bay,reef
+Whiting|s|0|0.2|0.7|26|1|surf
+Atlantic Mackerel|s|0|0.3|1.2|22|2|surf,reef,deep
+Sheepshead|s|1|0.8|5|20|4|surf,bay,reef
+Spotted Seatrout|s|1|0.6|4|28|6|bay
+Pompano|s|1|0.5|3|40|6|surf
+Bluefish|s|1|0.7|6|18|6|surf,bay
+Southern Flounder|s|1|0.7|5|28|7|bay,surf
+Black Drum|s|1|1|10|10|8|bay,surf
+Yellowtail Snapper|s|1|0.5|3|35|12|reef
+Triggerfish|s|1|0.5|2.5|30|12|reef
+Lionfish|s|1|0.3|1|50|13|reef
+Skipjack Tuna|s|1|2|8|18|22|deep
+Red Drum|s|2|2|20|16|10|bay,surf
+Striped Bass|s|2|3|25|18|12|surf,bay
+Snook|s|2|2|15|30|12|bay
+Bonefish|s|2|1|6|45|14|bay,reef
+Mutton Snapper|s|2|2|12|32|14|reef
+Red Snapper|s|2|2|15|28|15|reef
+Hogfish|s|2|1|8|40|15|reef
+Gag Grouper|s|2|3|25|22|16|reef
+Barracuda|s|2|2|25|15|16|reef,deep
+Cobia|s|2|5|35|16|18|reef,deep
+Mahi-Mahi|s|2|3|20|24|22|deep
+King Mackerel|s|2|3|25|16|22|deep
+Albacore Tuna|s|2|5|25|18|23|deep
+Escolar|s|2|4|40|20|34|trench
+Permit|s|3|3|25|35|24|reef,bay
+Tarpon|s|3|15|80|8|24|bay
+Yellowfin Tuna|s|3|15|120|18|26|deep
+Wahoo|s|3|8|45|24|26|deep
+Nassau Grouper|s|3|8|40|22|26|reef
+Sailfish|s|3|20|60|30|28|deep
+Swordfish|s|3|40|200|14|30|deep,trench
+Bigeye Tuna|s|3|20|150|20|30|deep,trench
+Mako Shark|s|3|40|250|12|32|deep
+Goliath Grouper|s|3|40|200|6|32|reef
+Patagonian Toothfish|s|3|10|100|30|35|trench
+Anglerfish|s|3|1|10|60|35|trench
+Opah|s|3|20|100|22|36|trench
+Ocean Sunfish|s|3|50|250|6|37|deep,trench
+Blue Marlin|s|4|100|400|12|38|deep
+Hammerhead Shark|s|4|60|300|14|38|deep
+Atlantic Bluefin Tuna|s|4|120|400|20|40|deep
+Tiger Shark|s|4|100|400|12|42|deep,trench
+Giant Oarfish|s|4|50|300|18|44|trench
+Greenland Shark|s|4|100|400|14|46|trench
+Coelacanth|s|4|30|90|40|50|trench`;
+  D.fish = fish.split('\n').map((line, i) => {
+    const a = line.split('|');
+    return {
+      idx: i, id: a[0].toLowerCase().replace(/[^a-z]+/g, ''), name: a[0], water: a[1], tier: +a[2],
+      minW: +a[3], maxW: +a[4], ppk: +a[5], minLvl: +a[6], locs: a[7].split(',')
+    };
+  });
+  D.fishById = {};
+  D.fish.forEach(f => (D.fishById[f.id] = f));
+
+  // Sale prices. Each species keeps its relative worth inside its tier (so a pompano still beats a croaker),
+  // but the typical value of a tier is set here. A fish sells for ppk * weight^wExp * grade multiplier.
+  D.wExp = 0.7;                                  // heavy fish are worth more, but not in direct proportion to their weight
+  D.tierVal = [8, 28, 70, 130, 260];             // typical sale value of a Good fish of each tier
+  D.saltMult = 0.8;                              // saltwater fish (boats and fuel cost money)
+  D.normalizePrices = function () {
+    D.fish.forEach(f => { if (f.ppk0 === undefined) f.ppk0 = f.ppk; });
+    const v0 = f => f.ppk0 * Math.pow((f.minW + f.maxW) / 2, D.wExp);
+    D.fish.forEach(f => {
+      const peers = D.fish.filter(x => x.tier === f.tier);
+      const mean = peers.reduce((s, x) => s + v0(x), 0) / peers.length;
+      const rel = Math.max(0.6, Math.min(1.7, v0(f) / mean));
+      f.ppk = D.tierVal[f.tier] * rel * (f.water === 's' ? D.saltMult : 1) / Math.pow((f.minW + f.maxW) / 2, D.wExp);
+    });
+  };
+  D.normalizePrices();
+
+  // id, name, price, bite, luck, qual, cap(kg)
+  D.rods = [
+    ['bamboo', 'Bamboo Pole', 0, 0, 0, 0, 8],
+    ['fiberglass', 'Fiberglass Rod', 250, 0.03, 0.02, 3, 25],
+    ['graphite', 'Graphite Rod', 1500, 0.06, 0.05, 6, 80],
+    ['carbon', 'Carbon Pro Rod', 7000, 0.09, 0.09, 9, 200],
+    ['master', 'Master Angler Rod', 30000, 0.12, 0.14, 13, 600]
+  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], price: a[2], bite: a[3], luck: a[4], qual: a[5], cap: a[6] }));
+
+  // id, name, water(f/s/a), price each, bite, luck, qual
+  D.baits = [
+    ['worms', 'Worms', 'f', 1, 0.04, 0, 0],
+    ['crickets', 'Crickets', 'f', 2, 0.05, 0.01, 0],
+    ['minnows', 'Minnows', 'f', 3, 0.06, 0.03, 1],
+    ['powerbait', 'Power Bait', 'f', 5, 0.08, 0.05, 2],
+    ['shrimp', 'Shrimp', 's', 1, 0.05, 0, 0],
+    ['squid', 'Squid Strips', 's', 3, 0.06, 0.03, 1],
+    ['mullet', 'Live Mullet', 's', 6, 0.09, 0.06, 2],
+    ['chum', 'Chum Bucket', 'a', 9, 0.10, 0.08, 3]
+  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], water: a[2], price: a[3], bite: a[4], luck: a[5], qual: a[6] }));
+  D.baits.forEach(b => { b.bite = Math.round(b.bite * 1.6 * 1000) / 1000; b.luck = Math.round(b.luck * 1.6 * 1000) / 1000; b.qual = Math.round(b.qual * 1.6 * 10) / 10; });   // bait strength tuned against the economy
+  D.baitById = {};
+  D.baits.forEach(b => (D.baitById[b.id] = b));
+
+  // tier 0 = no boat.  fuel: which fuel the boat burns, litres burned per cast out on the water, tank size, litres in the tank when bought
+  D.fuels = {
+    gas: { id: 'gas', name: 'Gasoline', price: 3 },
+    diesel: { id: 'diesel', name: 'Diesel', price: 4 }
+  };
+  D.boats = [
+    ['none', 'No boat', 0, 0, null, 0, 0, 0],
+    ['rowboat', 'Rowboat', 800, 0.02, 'gas', 1, 20, 8],
+    ['skiff', 'Skiff', 5000, 0.04, 'gas', 3, 60, 20],
+    ['sportfisher', 'Sport Fisher', 25000, 0.06, 'gas', 8, 160, 50],
+    ['trawler', 'Deep-Sea Trawler', 90000, 0.08, 'diesel', 12, 400, 100]
+  ].map((a, i) => ({ idx: i, id: a[0], name: a[1], price: a[2], bite: a[3], fuel: a[4], burn: a[5], tank: a[6], starter: a[7], haul: i === 4 ? 0.4 : 0 }));
+
+  D.upgrades = [
+    { id: 'finder', name: 'Fish Finder', prices: [1500, 6000, 25000], desc: '+4% bite chance per level' },
+    { id: 'motor', name: 'Outboard Motor', prices: [1200, 5000, 20000], desc: '-0.8s cast cooldown and -10% fuel use per level' },
+    { id: 'well', name: 'Live Well', prices: [2000, 8000, 32000], desc: '+8% fish sell value per level' },
+    { id: 'chest', name: 'Ice Chest', prices: [800, 3000, 12000], desc: '+10 bag space per level' }
+  ];
+  D.xpBase = 4.5; D.xpPow = 2.0; D.xpFlat = 8;   // xp needed for level l = floor(xpBase * l^xpPow)
+  D.lvLuck = 0.012;                // rare-fish chance gained per skill level
+  D.priceMult = 1;                 // multiplies every fish sale price
+  D.baseBag = 20;
+  D.startCash = 50;
+  D.wxBlockMs = 30 * 60 * 1000;
+
+  return D;
+})();
+if (typeof module !== 'undefined') module.exports = FG_DATA;
+
+
+
+/* The whole UI. `root` is the document (standalone page) or a ShadowRoot (overlay inside the chat room). */
+function createFishingUI(root, D) {
+  'use strict';
+  const $ = (s, r) => (r || root).querySelector(s);
+  // Strict page policies (like StumbleChat's) block inline data-s="" attributes, so styles are written as data-s and applied through the style API.
+  const fixAll = () => root.querySelectorAll('[data-s]').forEach(n => { n.style.cssText = n.getAttribute('data-s'); n.removeAttribute('data-s'); });
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = n => '$' + Math.round(n).toLocaleString('en-US');
+  const xpFor = l => Math.floor(18 * Math.pow(l, 1.45));
+  function lvlOf(xp) { let l = 1, rem = xp; while (l < D.maxLevel) { const n = xpFor(l); if (rem < n) break; rem -= n; l++; } return { l, cur: rem, need: l >= D.maxLevel ? 0 : xpFor(l) }; }
+  const wxEffect = w => {
+    const p = [];
+    if (w.bite) p.push('bites ' + (w.bite > 0 ? '+' : '') + Math.round(w.bite * 100) + '%');
+    if (w.luck) p.push('rare fish ' + (w.luck > 0 ? '+' : '') + Math.round(w.luck * 100) + '%');
+    if (w.qual) p.push('quality ' + (w.qual > 0 ? '+' : '') + w.qual);
+    if (w.id === 'storm') p.push('gear mishaps possible');
+    return p.length ? p.join(', ') : 'no effect';
+  };
+
+  /* ---------------- data: decode the link, or build demo data ---------------- */
+  async function decode(h) {
+    h = h.replace(/^#/, ''); if (h.length < 3) return null;
+    const kind = h.slice(0, 2); let b = h.slice(2).replace(/-/g, '+').replace(/_/g, '/');
+    while (b.length % 4) b += '=';
+    const bytes = Uint8Array.from(atob(b), c => c.charCodeAt(0));
+    if (kind === 'z.') {
+      const ds = new DecompressionStream('deflate-raw'); const w = ds.writable.getWriter(); w.write(bytes); w.close();
+      return JSON.parse(new TextDecoder().decode(await new Response(ds.readable).arrayBuffer()));
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  function demo() {
+    const names = ['Alice', 'Aaron', 'Amy', 'Bob', 'Bella', 'theChivery', 'Dana', 'Eli', 'Finn', 'Gus'];
+    const locs = [0, 6, 3, -1, 8, 1, 9, 2, 6, 10];
+    return {
+      v: D.version, r: 'demo', t: Date.now(), demo: true,
+      w: D.locs.map((l, i) => [0, 4, 5, 8, 3, 6, 9, 7, 2, 1, 5][i] % D.wx.length),
+      p: names.map((n, i) => [i + 1, n, locs[i], 3 + i * 4, 2 + i * 3, 50 + i * 420, 20 + i * 17, (i * 7) % D.fish.length, 20 + i * 90, 900 + i * 700, 10 - i]),
+      m: { pid: 1, f: 2100, s: 640, c: 735, rod: 2, boat: 1, up: [1, 0, 1, 0], bag: [7, 20, 143], eq: 1, fu: [14, 0], bt: [[0, 22], [4, 8]], st: [310, 168, 140, 5210], dex: [0, 1, 2, 3, 6, 7, 9, 33, 34, 35], loc: 0 }
+    };
+  }
+
+  /* ---------------- unique colors for identical letters ---------------- */
+  const PALETTE = ['#ff4d4d', '#ffd23f', '#8aff3a', '#3da5ff', '#ff8a1f', '#c27bff', '#2ef2d0', '#ff5fb8', '#f4f4f4', '#d9a066', '#ff2bd6', '#6d6dff'];
+  const initialOf = n => { const m = String(n).match(/[A-Za-z0-9]/); return m ? m[0].toUpperCase() : '?'; };
+  function assignColors(players) {
+    const used = {}, out = {};
+    players.slice().sort((a, b) => a.pid - b.pid).forEach(p => {
+      const L = initialOf(p.name); const set = used[L] || (used[L] = new Set());
+      let idx = p.pid % PALETTE.length, tries = 0;
+      while (set.has(idx) && tries < PALETTE.length) { idx = (idx + 1) % PALETTE.length; tries++; }
+      if (tries >= PALETTE.length) { out[p.pid] = 'hsl(' + ((set.size * 47 + p.pid * 13) % 360) + ',90%,66%)'; }
+      else { set.add(idx); out[p.pid] = PALETTE[idx]; }
+    });
+    return out;
+  }
+
+  /* ---------------- state ---------------- */
+  let snap = null, players = [], colors = {}, me = null, selected = null, sortKey = 'rank';
+  const meP = () => (me ? players.find(p => p.pid === me.pid) : null);
+  const locName = i => (i === -1 ? D.shop.name : i === -2 ? 'resting on shore' : D.locs[i].name);
+  const myLevel = water => (me ? lvlOf(water === 'f' ? me.f : me.s).l : null);
+  const lockedFor = l => me && (myLevel(l.water) < l.minLvl || me.boat < l.boat);
+
+  function setData(s) {
+    snap = s;
+    players = s.p.map(a => ({ pid: a[0], name: a[1], loc: a[2], fl: a[3], sl: a[4], cash: a[5], fish: a[6], best: a[7], bestW: a[8] / 10, xp: a[9], rank: a[10] }));
+    colors = assignColors(players); me = s.m || null;
+    $('#meta').textContent = (s.r ? 'Room: ' + s.r + ' · ' : '') + 'as of ' + new Date(s.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    $('#metab').style.display = me ? '' : 'none';
+    const b = $('#banner'); let msg = '';
+    if (s.demo) msg = 'Demo data. Open this page from a link in chat (try .map or .stats) to see your own room. Colors, weather and positions here are sample values.';
+    else if (s.v !== D.version) msg = 'This link was made by a different game version, so some details may look off.';
+    else if (s.live) msg = 'Live view from the running game, as of the moment you opened it. Close and reopen to refresh.';
+    else msg = 'This is a snapshot taken when the link was posted. Type .map in chat for a fresh link.';
+    b.textContent = msg; b.style.display = 'block';
+    drawMap(); renderSide(); renderBoard(); renderShop(); renderMe(); fixAll();
+  }
+
+  /* ---------------- the island map ---------------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const TREES = [[170, 200], [200, 245], [150, 300], [215, 310], [420, 128], [470, 182], [520, 222], [485, 335], [400, 420], [330, 478], [250, 505], [460, 490], [385, 352], [548, 262], [160, 385], [335, 262], [228, 205], [512, 428], [292, 432], [425, 300], [140, 250], [360, 520], [505, 150], [100, 330]];
+  function scenery() {
+    let s = '<defs>' +
+      '<linearGradient id="sea" x1="0" x2="1"><stop offset="0" stop-color="#52bdd0"/><stop offset=".5" stop-color="#2a8bb5"/><stop offset=".78" stop-color="#0f4a78"/><stop offset="1" stop-color="#071f3d"/></linearGradient>' +
+      '<radialGradient id="gSun"><stop offset="0" stop-color="#fff3a0" stop-opacity=".9"/><stop offset="1" stop-color="#fff3a0" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="gHeat"><stop offset="0" stop-color="#ff8a3a" stop-opacity=".85"/><stop offset="1" stop-color="#ff5a1a" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="gCalm"><stop offset="0" stop-color="#ffe08a" stop-opacity=".95"/><stop offset="1" stop-color="#ffe08a" stop-opacity="0"/></radialGradient>' +
+      D.locs.map(l => '<clipPath id="cp' + l.idx + '"><circle cx="' + l.x + '" cy="' + l.y + '" r="50"/></clipPath>').join('') +
+      '<clipPath id="cps"><circle cx="' + D.shop.x + '" cy="' + D.shop.y + '" r="40"/></clipPath>' +
+      '</defs>';
+    s += '<rect width="1000" height="620" fill="url(#sea)"/>';
+    // ocean zones
+    s += '<ellipse cx="860" cy="195" rx="125" ry="112" fill="#04182f" opacity=".35"/><ellipse cx="885" cy="535" rx="105" ry="75" fill="#020c1c" opacity=".55"/>';
+    s += '<ellipse cx="790" cy="405" rx="72" ry="48" fill="#4de3d0" opacity=".38"/>';
+    [[760, 392], [780, 420], [805, 392], [822, 415], [772, 405], [795, 378]].forEach(c => { s += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="5" fill="#ff8aa8" opacity=".75"/>'; });
+    s += '<text x="860" y="95" class="lbl" data-s="font-size:11px;opacity:.55">OPEN OCEAN</text><text x="885" y="610" class="lbl" data-s="font-size:11px;opacity:.5">THE DEEP</text>';
+    s += '<text x="30" y="40" data-s="font:italic 700 22px Georgia,serif;fill:#fff;opacity:.35">Fishing Island</text>';
+    s += '<text x="740" y="276" font-size="22" opacity=".9">🐬</text><text x="738" y="480" font-size="24" opacity=".9">⛵</text><text x="940" y="350" font-size="22" opacity=".8">🐋</text>';
+    // island
+    const island = 'M120 300 C100 200,150 110,260 80 C350 55,470 70,540 130 C610 185,640 240,645 300 C650 360,620 400,600 440 C585 480,590 530,540 555 C470 580,360 575,280 560 C200 545,120 520,95 450 C75 400,110 360,120 300Z';
+    s += '<path d="' + island + '" fill="#79b657" stroke="#ecd9a0" stroke-width="14" stroke-linejoin="round"/>';
+    s += '<path d="' + island + '" fill="none" stroke="#c9b777" stroke-width="2" opacity=".6"/>';
+    // mountains
+    [[170, 150, 205, 85, 240, 150], [225, 142, 262, 66, 300, 142], [285, 152, 322, 92, 358, 152], [330, 120, 365, 70, 400, 120]].forEach(m => {
+      s += '<polygon points="' + m[0] + ',' + m[1] + ' ' + m[2] + ',' + m[3] + ' ' + m[4] + ',' + m[5] + '" fill="#8a8f98"/><polygon points="' + m[2] + ',' + m[3] + ' ' + (m[2] - 11) + ',' + (m[3] + 20) + ' ' + (m[2] + 11) + ',' + (m[3] + 20) + '" fill="#fff"/>';
+    });
+    TREES.forEach(t => { s += '<circle cx="' + t[0] + '" cy="' + t[1] + '" r="8" fill="#3f7d2f"/><circle cx="' + (t[0] - 2) + '" cy="' + (t[1] - 2) + '" r="4" fill="#5ea245"/>'; });
+    // water bodies
+    s += '<ellipse cx="255" cy="120" rx="38" ry="22" fill="#6cc3ee" stroke="#d6efff" stroke-width="2"/>';
+    s += '<path d="M280 138 C320 150,340 165,355 175 C395 200,380 235,430 250 C480 262,500 300,540 320 C580 340,620 335,648 346" fill="none" stroke="#4aa3d9" stroke-width="9" stroke-linecap="round"/>';
+    s += '<path d="M335 160 C350 170,360 178,380 192" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="4 5" stroke-linecap="round"/>';
+    s += '<ellipse cx="300" cy="335" rx="56" ry="35" fill="#4aa3d9" stroke="#d6efff" stroke-width="2"/><ellipse cx="288" cy="328" rx="22" ry="9" fill="#7fc4ee" opacity=".7"/>';
+    s += '<ellipse cx="195" cy="445" rx="60" ry="38" fill="#5d7a3a"/><ellipse cx="190" cy="448" rx="38" ry="20" fill="#3f6b5a"/>';
+    for (let i = 0; i < 9; i++) { const x = 160 + i * 9, y = 428 + (i % 3) * 14; s += '<path d="M' + x + ' ' + (y + 10) + ' L' + x + ' ' + y + '" stroke="#8b6b3a" stroke-width="2"/><ellipse cx="' + x + '" cy="' + (y - 2) + '" rx="2" ry="4" fill="#5a3b1a"/>'; }
+    s += '<ellipse cx="128" cy="518" rx="50" ry="27" fill="#455a29"/><ellipse cx="126" cy="520" rx="30" ry="14" fill="#2b4a45"/>';
+    s += '<ellipse cx="598" cy="503" rx="44" ry="31" fill="#4fb0c9" stroke="#ecd9a0" stroke-width="5"/>';
+    [[566, 490], [572, 520], [610, 528], [628, 500], [600, 476]].forEach(c => { s += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="5" fill="#2f6b3a"/><path d="M' + c[0] + ' ' + (c[1] + 4) + ' l-3 6 M' + c[0] + ' ' + (c[1] + 4) + ' l3 6" stroke="#5a3b1a" stroke-width="1.5"/>'; });
+    // shop + dock
+    s += '<rect x="590" y="400" width="62" height="9" fill="#9a6b3a"/><rect x="590" y="400" width="62" height="2" fill="#c89a62"/>';
+    s += '<rect x="557" y="385" width="36" height="26" fill="#c97b3b" stroke="#6b3a14" stroke-width="2"/><polygon points="553,386 575,368 597,386" fill="#b3342e" stroke="#6b1f1b" stroke-width="2"/>';
+    s += '<rect x="565" y="395" width="10" height="16" fill="#5a3b1a"/><rect x="579" y="392" width="10" height="9" fill="#bfe6ff"/><text x="575" y="381" font-size="9" font-weight="800" text-anchor="middle" fill="#fff" data-s="paint-order:stroke;stroke:#6b1f1b;stroke-width:2px">SHOP</text>';
+    return s;
+  }
+
+  function wxOverlay(clip, cx, cy, wx) {
+    let s = '<g clip-path="url(#' + clip + ')" pointer-events="none">';
+    const dl = i => 'data-s="animation-delay:-' + ((i * 0.37) % 2.4).toFixed(2) + 's"';
+    switch (wx.id) {
+      case 'clear': s += '<circle cx="' + (cx + 22) + '" cy="' + (cy - 22) + '" r="34" fill="url(#gSun)" class="a-glow"/>'; break;
+      case 'cloudy': s += '<ellipse cx="' + cx + '" cy="' + (cy - 24) + '" rx="26" ry="9" fill="#fff" opacity=".45" class="a-drift"/>'; break;
+      case 'overcast': s += '<ellipse cx="' + cx + '" cy="' + (cy - 28) + '" rx="40" ry="13" fill="#9aa5ad" opacity=".5" class="a-drift"/><ellipse cx="' + (cx + 14) + '" cy="' + (cy - 14) + '" rx="30" ry="10" fill="#b9c2c9" opacity=".4" class="a-drift"/>'; break;
+      case 'drizzle': case 'rain': case 'storm': {
+        const n = wx.id === 'drizzle' ? 6 : wx.id === 'rain' ? 12 : 16;
+        if (wx.id !== 'drizzle') s += '<rect x="' + (cx - 50) + '" y="' + (cy - 50) + '" width="100" height="100" fill="#10233a" opacity="' + (wx.id === 'storm' ? .35 : .18) + '"/>';
+        for (let i = 0; i < n; i++) { const x = cx - 44 + (i * 89) / n + (i % 2) * 3, y = cy - 30 + ((i * 17) % 40); s += '<line x1="' + x + '" y1="' + y + '" x2="' + (x - 3) + '" y2="' + (y + 9) + '" stroke="#d6ecff" stroke-width="1.5" class="a-fall" ' + dl(i) + '/>'; }
+        if (wx.id === 'storm') s += '<rect x="' + (cx - 50) + '" y="' + (cy - 50) + '" width="100" height="100" fill="#fff6b0" class="a-flash"/><path d="M' + (cx + 6) + ' ' + (cy - 44) + ' l-9 20 h8 l-6 18 l15 -24 h-9 l7 -14z" fill="#ffe34d" stroke="#fff" stroke-width=".8" class="a-flash"/>';
+        break;
+      }
+      case 'fog': s += '<ellipse cx="' + cx + '" cy="' + (cy - 8) + '" rx="48" ry="16" fill="#fff" opacity=".45" class="a-drift"/><ellipse cx="' + (cx + 8) + '" cy="' + (cy + 14) + '" rx="44" ry="14" fill="#fff" opacity=".38" class="a-drift" data-s="animation-delay:-2s"/>'; break;
+      case 'windy': for (let i = 0; i < 4; i++) s += '<path d="M' + (cx - 30) + ' ' + (cy - 26 + i * 14) + ' h' + (36 + (i % 2) * 14) + ' q8 0 8 -6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8" class="a-gust" ' + dl(i * 3) + '/>'; break;
+      case 'heat': s += '<circle cx="' + cx + '" cy="' + cy + '" r="46" fill="url(#gHeat)" class="a-glow"/>'; break;
+      case 'calm': s += '<circle cx="' + cx + '" cy="' + cy + '" r="46" fill="url(#gCalm)" class="a-glow"/>'; [[-24, -18], [20, -26], [28, 14], [-30, 18]].forEach((p, i) => { s += '<text x="' + (cx + p[0]) + '" y="' + (cy + p[1]) + '" font-size="12" class="a-glow" ' + dl(i * 5) + '>✦</text>'; }); break;
+      case 'snow': for (let i = 0; i < 12; i++) { const x = cx - 40 + (i * 80) / 12, y = cy - 30 + ((i * 13) % 30); s += '<circle cx="' + x + '" cy="' + y + '" r="2.2" fill="#fff" class="a-snow" ' + dl(i * 2) + '/>'; } break;
+    }
+    return s + '</g>';
+  }
+
+  function lettersFor(idx) {
+    const here = players.filter(p => p.loc === idx).sort((a, b) => a.pid - b.pid);
+    if (!here.length) return '';
+    const per = 7; let s = '';
+    here.forEach((p, i) => {
+      const row = Math.floor(i / per), inRow = Math.min(per, here.length - row * per), col = i % per;
+      const x = (col - (inRow - 1) / 2) * 17, y = -27 - row * 19;
+      s += '<g class="pl' + (me && p.pid === me.pid ? ' me' : '') + '" data-pid="' + p.pid + '" transform="translate(' + x + ',' + y + ')"><rect x="-8" y="-15" width="16" height="19" fill="transparent"/>' +
+        (me && p.pid === me.pid ? '<circle class="mering" cx="0" cy="-5" r="11"/>' : '') +
+        '<text y="0" fill="' + colors[p.pid] + '">' + esc(initialOf(p.name)) + '</text></g>';
+    });
+    return s;
+  }
+
+  function drawMap() {
+    let s = scenery();
+    // weather first so markers/letters stay on top
+    D.locs.forEach(l => { s += wxOverlay('cp' + l.idx, l.x, l.y, D.wx[snap.w[l.idx]]); });
+    D.locs.forEach(l => {
+      const wx = D.wx[snap.w[l.idx]], fresh = l.water === 'f', lock = lockedFor(l);
+      s += '<g class="loc' + (selected === l.idx ? ' sel' : '') + '" data-loc="' + l.idx + '" tabindex="0" role="button" aria-label="' + esc(l.name + ', ' + wx.name) + '" transform="translate(' + l.x + ',' + l.y + ')" opacity="' + (lock ? .72 : 1) + '">' +
+        '<circle class="ring" r="19"/><g class="pin"><circle r="12" fill="' + (fresh ? '#1d70b8' : '#0b4f6c') + '" stroke="#fff" stroke-width="2.5"/><text y="5" font-size="13" text-anchor="middle">' + (lock ? '🔒' : fresh ? '🎣' : '⚓') + '</text></g>' +
+        '<text class="wxi" x="19" y="-9">' + wx.icon + '</text><text class="lbl" y="30">' + esc(l.name) + '</text>' + lettersFor(l.idx) + '</g>';
+    });
+    s += '<g class="loc" data-loc="shop" tabindex="0" role="button" aria-label="Tackle Shop" transform="translate(' + D.shop.x + ',' + (D.shop.y - 34) + ')"><circle class="ring" r="19" cy="0"/><text class="lbl" y="64">🏪 Tackle Shop</text>' + lettersFor(-1) + '</g>';
+    $('#map').innerHTML = s;
+  }
+
+  /* ---------------- tooltips + clicks on the map ---------------- */
+  const tip = $('#tip');
+  function tipHtml(p) {
+    const f = p.best >= 0 ? D.fish[p.best] : null;
+    return '<span class="dot" data-s="background:' + colors[p.pid] + '"></span><b>' + esc(p.name) + '</b><br>Freshwater Lv ' + p.fl + ' · Saltwater Lv ' + p.sl +
+      '<br>' + money(p.cash) + ' · rank #' + p.rank + '<br><span class="muted">At ' + esc(locName(p.loc)) + '</span>' + (f ? '<br><span class="muted">Biggest: ' + esc(f.name) + ' ' + p.bestW + 'kg</span>' : '');
+  }
+  function showTip(ev, p) {
+    tip.innerHTML = tipHtml(p); fixAll(); tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    tip.style.left = Math.min(innerWidth - r.width - 8, ev.clientX + 14) + 'px';
+    tip.style.top = Math.min(innerHeight - r.height - 8, ev.clientY + 16) + 'px';
+  }
+  const pl = ev => { const g = ev.target.closest && ev.target.closest('.pl'); return g ? players.find(p => p.pid === +g.dataset.pid) : null; };
+  const mapEl = $('#map');
+  mapEl.addEventListener('mousemove', ev => { const p = pl(ev); if (p) showTip(ev, p); else tip.style.display = 'none'; });
+  mapEl.addEventListener('mouseleave', () => (tip.style.display = 'none'));
+  mapEl.addEventListener('click', ev => {
+    const p = pl(ev); if (p) { showTip(ev, p); ev.stopPropagation(); return; }
+    const g = ev.target.closest('.loc'); if (!g) return;
+    select(g.dataset.loc === 'shop' ? 'shop' : +g.dataset.loc);
+  });
+  mapEl.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { const g = ev.target.closest && ev.target.closest('.loc'); if (g) { ev.preventDefault(); select(g.dataset.loc === 'shop' ? 'shop' : +g.dataset.loc); } } });
+  document.addEventListener('click', () => (tip.style.display = 'none'));
+  function select(v) { selected = v; drawMap(); renderSide(); fixAll(); }
+
+  /* ---------------- side panel ---------------- */
+  function peopleChips(idx) {
+    const here = players.filter(p => p.loc === idx);
+    return here.length ? here.map(p => '<span class="chip" data-s="color:' + colors[p.pid] + '" title="' + esc(p.name) + '">' + esc(initialOf(p.name)) + '</span>' + esc(p.name)).join(' &nbsp; ') : '<span class="muted">Nobody right now.</span>';
+  }
+  function renderSide() {
+    const el = $('#side');
+    if (selected === 'shop') {
+      el.innerHTML = '<h2>🏪 Tackle Shop</h2><p class="muted">Sell your catch, buy rods, bait, boats and boat upgrades. Everything is done with chat commands.</p>' +
+        '<p><code>.sell all</code> <code>.shop rods</code> <code>.shop bait</code> <code>.shop boats</code> <code>.shop upgrades</code> <code>.buy name</code></p>' +
+        '<p><button class="btn" id="goShop">Open the shop catalog</button></p><h3>At the shop</h3><div>' + peopleChips(-1) + '</div><p><button class="btn" id="back">Back to island report</button></p>';
+      $('#goShop').onclick = () => tab('shop'); $('#back').onclick = () => select(null);
+      return;
+    }
+    if (selected != null) {
+      const l = D.locs[selected], wx = D.wx[snap.w[l.idx]], fish = D.fish.filter(f => f.water === l.water && f.locs.includes(l.id)).sort((a, b) => a.minLvl - b.minLvl);
+      const caught = me ? new Set(me.dex) : null;
+      let h = '<h2>' + wx.icon + ' ' + esc(l.name) + ' <span class="tag ' + l.water + '">' + (l.water === 'f' ? 'Freshwater' : 'Saltwater') + ' · ' + l.kind + '</span></h2><p class="muted">' + esc(l.blurb) + '</p>';
+      h += '<p><b>Needs:</b> ' + (l.water === 'f' ? 'Freshwater' : 'Saltwater') + ' Lv ' + l.minLvl + (l.boat ? ' + ' + D.boats[l.boat].name : '') + (me ? (lockedFor(l) ? ' <span class="no">(locked for you)</span>' : ' <span class="ok">(you can fish here)</span>') : '') + '</p>';
+      h += '<p><b>Weather:</b> ' + wx.icon + ' ' + wx.name + '<br><span class="muted">' + wxEffect(wx) + '. Weather changes through the day.</span></p>';
+      h += '<p>Go there: <code>.go ' + l.id + '</code> then <code>.fish</code></p><h3>Who is here</h3><div>' + peopleChips(l.idx) + '</div><h3>Fish found here</h3><table><tr><th>Fish</th><th>Size</th><th class="n">Typical $</th><th class="n">Lv</th>' + (me ? '<th></th>' : '') + '</tr>';
+      fish.forEach(f => { h += '<tr><td class="t' + f.tier + '">' + esc(f.name) + '</td><td>' + f.minW + '–' + f.maxW + 'kg</td><td class="n">' + Math.round(Math.pow((f.minW + f.maxW) / 2, D.wExp || 1) * f.ppk) + '</td><td class="n">' + f.minLvl + '</td>' + (me ? '<td>' + (caught.has(f.idx) ? '✓' : '') + '</td>' : '') + '</tr>'; });
+      h += '</table><p class="muted" data-s="font-size:12px">Colors: <span class="t0">common</span> · <span class="t1">uncommon</span> · <span class="t2">rare</span> · <span class="t3">epic</span> · <span class="t4">legendary</span>. Higher skill unlocks better fish and better quality.</p><p><button class="btn" id="back">Back to island report</button></p>';
+      el.innerHTML = h; $('#back').onclick = () => select(null);
+      return;
+    }
+    let h = '<h2>Island report</h2><p class="muted" data-s="margin-top:-4px">Click a spot for details. Hover a letter to see who it is.</p>';
+    D.locs.forEach(l => { const w = D.wx[snap.w[l.idx]]; h += '<div class="wxrow"><span class="ic">' + w.icon + '</span><span class="nm" data-l="' + l.idx + '">' + esc(l.name) + (lockedFor(l) ? ' 🔒' : '') + '</span><span class="muted" data-s="font-size:12px">' + w.name + '</span></div>'; });
+    h += '<h3>Weather effects</h3><div data-s="font-size:12.5px">';
+    D.wx.forEach(w => { h += '<div>' + w.icon + ' <b>' + w.name + '</b> <span class="muted">' + wxEffect(w) + '</span></div>'; });
+    h += '</div><h3>Players</h3><div data-s="font-size:12.5px">' + (players.filter(p => p.loc !== -2).map(p => '<span class="chip" data-s="color:' + colors[p.pid] + '">' + esc(initialOf(p.name)) + '</span>' + esc(p.name)).join(' &nbsp; ') || '<span class="muted">Nobody is out fishing right now.</span>') + '</div>';
+    el.innerHTML = h;
+    el.querySelectorAll('.nm').forEach(n => (n.onclick = () => select(+n.dataset.l)));
+  }
+
+  /* ---------------- leaderboard ---------------- */
+  function renderBoard() {
+    const keys = { rank: p => p.rank, fl: p => -p.fl, sl: p => -p.sl, cash: p => -p.cash, fish: p => -p.fish };
+    const list = players.slice().sort((a, b) => keys[sortKey](a) - keys[sortKey](b) || a.rank - b.rank);
+    const th = (k, t, n) => '<th class="sort' + (n ? ' n' : '') + '" data-k="' + k + '">' + t + (sortKey === k ? ' ▾' : '') + '</th>';
+    let h = '<h2>🏆 Leaderboard</h2><table><tr>' + th('rank', '#', 1) + '<th>Angler</th>' + th('fl', 'Freshwater', 1) + th('sl', 'Saltwater', 1) + th('cash', 'Cash', 1) + th('fish', 'Caught', 1) + '<th>Biggest catch</th><th>Now</th></tr>';
+    list.forEach(p => {
+      const f = p.best >= 0 ? D.fish[p.best] : null;
+      h += '<tr' + (me && p.pid === me.pid ? ' data-s="background:#10344a"' : '') + '><td class="n">' + p.rank + '</td><td><span class="chip" data-s="color:' + colors[p.pid] + '">' + esc(initialOf(p.name)) + '</span>' + esc(p.name) + '</td><td class="n">Lv ' + p.fl + '</td><td class="n">Lv ' + p.sl + '</td><td class="n">' + money(p.cash) + '</td><td class="n">' + p.fish + '</td><td>' + (f ? '<span class="t' + f.tier + '">' + esc(f.name) + '</span> ' + p.bestW + 'kg' : '<span class="muted">none</span>') + '</td><td class="muted">' + esc(locName(p.loc)) + '</td></tr>';
+    });
+    h += '</table><p class="muted" data-s="font-size:12px">Ranked by total experience across Freshwater and Saltwater skills. Click a column heading to sort. Type <code>.top</code> in chat for the quick list.</p>';
+    $('#board').innerHTML = h; fixAll();
+    $('#board').querySelectorAll('th.sort').forEach(t => (t.onclick = () => { sortKey = t.dataset.k; renderBoard(); }));
+  }
+
+  /* ---------------- shop catalog ---------------- */
+  function renderShop() {
+    const own = me || {};
+    let h = '<div class="card"><h2>🏪 Tackle Shop</h2><p>Sell fish: <code>.sell all</code> · <code>.sell fresh</code> · <code>.sell salt</code> · <code>.sell bass</code>. Buy with <code>.buy name</code> (bait: <code>.buy worms 25</code>).' + (me ? ' You have <b>' + money(me.c) + '</b>.' : '') + '</p>';
+    h += '<h3>Fish value</h3><p class="muted" data-s="margin:0">Price depends on the species, how heavy the fish is (heavier is worth more, but not in direct proportion) and its quality: ' + D.grades.map(g => '<b>' + g.n + '</b> ×' + g.m).join(', ') + '. Live Well upgrades add +8% per level. Higher skill gives better quality and bigger fish.</p></div>';
+    h += '<div class="grid" data-s="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:14px">';
+    h += '<div class="card"><h2>Rods</h2><table><tr><th>Rod</th><th class="n">Price</th><th class="n">Bite</th><th class="n">Luck</th><th class="n">Quality</th><th class="n">Max kg</th></tr>' + D.rods.map(r => '<tr><td>' + esc(r.name) + (own.rod === r.idx ? ' <span class="ok">✓ yours</span>' : '') + (r.price ? '<br><code>.buy ' + r.id + '</code>' : '<br><span class="muted">starter</span>') + '</td><td class="n">' + (r.price ? money(r.price) : 'free') + '</td><td class="n">+' + Math.round(r.bite * 100) + '%</td><td class="n">+' + Math.round(r.luck * 100) + '%</td><td class="n">+' + r.qual + '</td><td class="n">' + r.cap + '</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">A rod too weak for a huge fish will lose it.</p></div>';
+    h += '<div class="card"><h2>Bait</h2><table><tr><th>Bait</th><th>Water</th><th class="n">Each</th><th class="n">Bite</th><th class="n">Luck</th></tr>' + D.baits.map(b => '<tr><td>' + esc(b.name) + '<br><code>.buy ' + b.id + ' 10</code></td><td>' + (b.water === 'f' ? 'Fresh' : b.water === 's' ? 'Salt' : 'Any') + '</td><td class="n">' + money(b.price) + '</td><td class="n">+' + Math.round(b.bite * 100) + '%</td><td class="n">+' + Math.round(b.luck * 100) + '%</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">One bait is used per cast. <code>.bait name</code> to equip.</p></div>';
+    h += '<div class="card"><h2>Boats</h2><table><tr><th>Boat</th><th class="n">Price</th><th class="n">Bite</th><th>Fuel per cast</th><th>Opens</th></tr>' + D.boats.slice(1).map(b => '<tr><td>' + esc(b.name) + (own.boat === b.idx ? ' <span class="ok">✓ yours</span>' : '') + '<br><code>.buy ' + b.id + '</code></td><td class="n">' + money(b.price) + '</td><td class="n">+' + Math.round(b.bite * 100) + '%</td><td>' + b.burn + ' L ' + D.fuels[b.fuel].name + '<br><span class="muted">tank ' + b.tank + ' L</span></td><td>' + (D.locs.filter(l => l.boat === b.idx).map(l => esc(l.name)).join(', ') || '<span class="muted">best bonuses</span>') + '</td></tr>').join('') + '</table></div>';
+    h += '<div class="card"><h2>⛽ Fuel</h2><table><tr><th>Fuel</th><th class="n">Price per litre</th><th>Used by</th></tr>' + Object.keys(D.fuels).map(k => '<tr><td>' + D.fuels[k].name + '<br><code>.buy ' + k + ' 20</code></td><td class="n">' + money(D.fuels[k].price) + '</td><td>' + D.boats.slice(1).filter(b => b.fuel === k).map(b => esc(b.name)).join(', ') + '</td></tr>').join('') + '</table><p class="muted" data-s="font-size:12px">A boat burns fuel on every cast out on the water (spots that need a boat). Fishing from shore is free. <code>.buy fuel full</code> fills your tank. Outboard Motor upgrades cut fuel use by 10% per level, and the Deep-Sea Trawler nets an extra fish on 40% of casts.</p></div>';
+    h += '<div class="card"><h2>Boat upgrades</h2><p class="muted" data-s="margin-top:-4px">Need a boat. Three levels each.</p><table><tr><th>Upgrade</th><th>Effect</th><th class="n">Level prices</th></tr>' + D.upgrades.map((u, i) => '<tr><td>' + esc(u.name) + (own.up ? ' <span class="muted">(' + own.up[i] + '/3)</span>' : '') + '<br><code>.buy ' + (u.id === 'well' ? 'livewell' : u.id) + '</code></td><td>' + esc(u.desc) + '</td><td class="n">' + u.prices.map(money).join('<br>') + '</td></tr>').join('') + '</table></div></div>';
+    $('#shop').innerHTML = h;
+  }
+
+  /* ---------------- my angler ---------------- */
+  function bar(info) { return '<div class="bar"><i data-s="width:' + (info.need ? Math.min(100, (info.cur / info.need) * 100) : 100) + '%"></i></div>'; }
+  function renderMe() {
+    const el = $('#me');
+    if (!me) { el.innerHTML = '<div class="card">Open the link from a <code>.stats</code> or <code>.map</code> message in chat to see your own angler page.</div>'; return; }
+    const p = meP(), f = lvlOf(me.f), s = lvlOf(me.s), got = new Set(me.dex);
+    let h = '<div class="card"><h2>' + (p ? '<span class="chip" data-s="color:' + colors[p.pid] + '">' + esc(initialOf(p.name)) + '</span>' + esc(p.name) : 'Your angler') + '</h2><div class="cards">' +
+      '<div class="stat"><div class="k">Freshwater</div><div class="v">Lv ' + f.l + '</div>' + bar(f) + '<div class="k">' + f.cur + ' / ' + (f.need || 'MAX') + ' xp</div></div>' +
+      '<div class="stat"><div class="k">Saltwater</div><div class="v">Lv ' + s.l + '</div>' + bar(s) + '<div class="k">' + s.cur + ' / ' + (s.need || 'MAX') + ' xp</div></div>' +
+      '<div class="stat"><div class="k">Cash</div><div class="v">' + money(me.c) + '</div><div class="k">Rank #' + (p ? p.rank : '?') + '</div></div>' +
+      '<div class="stat"><div class="k">Bag</div><div class="v">' + me.bag[0] + '/' + me.bag[1] + '</div><div class="k">worth ~' + money(me.bag[2]) + '</div></div>' +
+      '<div class="stat"><div class="k">Rod</div><div class="v" data-s="font-size:15px">' + esc(D.rods[me.rod].name) + '</div></div>' +
+      '<div class="stat"><div class="k">Boat</div><div class="v" data-s="font-size:15px">' + esc(D.boats[me.boat].name) + '</div><div class="k">' + D.upgrades.map((u, i) => u.name + ' ' + me.up[i]).join(' · ') + '</div></div>' +
+      (me.boat ? '<div class="stat"><div class="k">⛽ Fuel</div><div class="v" data-s="font-size:15px">' + (me.fu ? me.fu[D.boats[me.boat].fuel === 'diesel' ? 1 : 0] : 0) + ' / ' + D.boats[me.boat].tank + ' L</div><div class="k">' + D.fuels[D.boats[me.boat].fuel].name + ', ' + D.boats[me.boat].burn + ' L per cast on the water</div></div>' : '') + '</div>';
+    h += '<h3>Bait</h3><div>' + (me.bt.length ? me.bt.map(b => esc(D.baits[b[0]].name) + ' ×' + b[1] + (b[0] === me.eq ? ' <span class="ok">(equipped)</span>' : '')).join(' &nbsp;·&nbsp; ') : '<span class="muted">none</span>') + '</div>';
+    h += '<h3>Lifetime</h3><div class="cards"><div class="stat"><div class="k">Casts</div><div class="v">' + me.st[0] + '</div></div><div class="stat"><div class="k">Fish caught</div><div class="v">' + me.st[1] + '</div></div><div class="stat"><div class="k">Fish sold</div><div class="v">' + me.st[2] + '</div></div><div class="stat"><div class="k">Total earned</div><div class="v">' + money(me.st[3]) + '</div></div></div></div>';
+    h += '<div class="card" data-s="margin-top:14px"><h2>Fish journal (' + me.dex.length + '/' + D.fish.length + ')</h2>';
+    ['f', 's'].forEach(w => { h += '<h3>' + (w === 'f' ? 'Freshwater' : 'Saltwater') + '</h3><div class="dex">' + D.fish.filter(x => x.water === w).map(x => '<span class="' + (got.has(x.idx) ? 'got t' + x.tier : '') + '">' + (got.has(x.idx) ? esc(x.name) : '???') + '</span>').join('') + '</div>'; });
+    el.innerHTML = h + '</div>';
+  }
+
+  /* ---------------- tabs + boot ---------------- */
+  function tab(name) {
+    root.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+    ['map', 'board', 'shop', 'me'].forEach(t => ($('#tab-' + t).hidden = t !== name));
+  }
+  $('#tabs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) tab(b.dataset.tab); });
+
+  async function loadFromHash(hash) {
+    let s = null;
+    try { s = await decode(hash); } catch (e) { console.warn('Could not read the link data', e); }
+    selected = null;
+    setData(s && s.w && s.p ? s : demo());
+    if (!(s && s.w && s.p) && hash.length > 3) { $('#banner').textContent = 'Could not read the data in this link, so demo data is shown. Ask for a fresh link with !map in chat.'; }
+  }
+  fixAll();
+  return { loadFromHash, setData: s => { selected = null; setData(s); }, tab, decode, demo };
+}
+
+(function () {
+  var ui = createFishingUI(document, FG_DATA);
+  window.addEventListener('hashchange', function () { ui.loadFromHash(location.hash); });   // a newer chat link in the same tab refreshes the page
+  ui.loadFromHash(location.hash);
+})();
+</script>
+</body>
+</html>
