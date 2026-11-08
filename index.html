@@ -164,7 +164,7 @@ const FG_DATA = (function () {
 
   // id, name, water, kind, minLvl, boat, xpMult, x, y, climate, blurb
   D.locs = [
-    ['lake', 'Mirror Lake', 'f', 'lake', 1, 0, 1.0, 300, 335, 'temperate', 'A calm lake in the middle of the island.'],
+    ['mirror', 'Mirror Lake', 'f', 'lake', 1, 0, 1.0, 300, 335, 'temperate', 'A calm lake in the middle of the island.'],
     ['river', 'Willow River', 'f', 'river', 3, 0, 1.0, 450, 255, 'river', 'A winding river that runs from the hills to the sea.'],
     ['swamp', 'Cypress Swamp', 'f', 'swamp', 5, 0, 1.1, 195, 445, 'swamp', 'Murky water and knobby cypress knees.'],
     ['alpine', 'Alpine Lake', 'f', 'lake', 8, 0, 1.2, 255, 120, 'mountain', 'Ice-cold water beneath the peaks.'],
@@ -184,30 +184,30 @@ const FG_DATA = (function () {
   D.shop = { id: 'shop', name: 'Tackle Shop', x: 575, y: 395 };
 
   // name|water|tier|minW|maxW|$/kg|minLvl|locations
-  const fish = `Bluegill|f|0|0.1|0.5|28|1|lake,river,swamp
-Yellow Perch|f|0|0.15|0.7|26|1|lake,alpine,river
-Pumpkinseed Sunfish|f|0|0.1|0.4|30|1|lake,swamp,river
-Black Crappie|f|0|0.2|0.9|24|1|lake,swamp,bayou
-Redear Sunfish|f|0|0.2|0.8|22|2|swamp,bayou,lake
-Common Carp|f|0|1|6|8|2|lake,river
-Largemouth Bass|f|1|0.8|4|18|3|lake,swamp,river,bayou
-Smallmouth Bass|f|1|0.6|3|22|4|river,lake,rapids
-Channel Catfish|f|1|1|8|10|4|river,lake,swamp,bayou
+  const fish = `Bluegill|f|0|0.1|0.5|28|1|mirror,river,swamp
+Yellow Perch|f|0|0.15|0.7|26|1|mirror,alpine,river
+Pumpkinseed Sunfish|f|0|0.1|0.4|30|1|mirror,swamp,river
+Black Crappie|f|0|0.2|0.9|24|1|mirror,swamp,bayou
+Redear Sunfish|f|0|0.2|0.8|22|2|swamp,bayou,mirror
+Common Carp|f|0|1|6|8|2|mirror,river
+Largemouth Bass|f|1|0.8|4|18|3|mirror,swamp,river,bayou
+Smallmouth Bass|f|1|0.6|3|22|4|river,mirror,rapids
+Channel Catfish|f|1|1|8|10|4|river,mirror,swamp,bayou
 Rainbow Trout|f|1|0.5|4|24|5|river,alpine,rapids
 Brook Trout|f|1|0.3|2|30|5|alpine,rapids
 Chain Pickerel|f|1|0.7|3.5|20|5|swamp,bayou
-Walleye|f|1|0.8|6|28|8|lake,river
+Walleye|f|1|0.8|6|28|8|mirror,river
 Brown Trout|f|1|0.6|5|26|8|alpine,river,rapids
 American Eel|f|2|0.5|3|40|10|river,swamp,bayou
 Bowfin|f|2|1.5|7|15|10|swamp,bayou
 Arctic Grayling|f|2|0.3|1.5|60|11|alpine
-Northern Pike|f|2|2|14|14|12|lake,river,swamp
+Northern Pike|f|2|2|14|14|12|mirror,river,swamp
 Coho Salmon|f|2|2|9|20|12|rapids,river
 Steelhead|f|2|2|9|22|13|rapids
 Flathead Catfish|f|2|4|30|8|14|river,bayou
 Lake Trout|f|2|2|18|14|14|alpine
 Longnose Gar|f|2|2|12|11|15|bayou,swamp,river
-Muskellunge|f|3|6|25|20|20|lake,river
+Muskellunge|f|3|6|25|20|20|mirror,river
 Blue Catfish|f|3|10|50|9|22|river,bayou
 Chinook Salmon|f|3|8|30|15|24|rapids
 Paddlefish|f|3|10|45|10|25|river,bayou
@@ -216,7 +216,7 @@ Alligator Gar|f|3|15|90|10|28|bayou,swamp
 Golden Trout|f|3|0.5|3|150|30|alpine
 Taimen|f|4|20|60|22|36|rapids
 Arapaima|f|4|40|150|9|38|bayou
-Beluga Sturgeon|f|4|60|200|11|40|river,lake
+Beluga Sturgeon|f|4|60|200|11|40|river,mirror
 Atlantic Croaker|s|0|0.2|0.8|26|1|shore,bay
 Spot|s|0|0.1|0.4|30|1|shore,bay
 Pinfish|s|0|0.1|0.3|28|1|shore,bay,reef
